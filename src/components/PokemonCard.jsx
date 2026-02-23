@@ -1,19 +1,18 @@
-// Tarjeta de cada pokemon
-const PokemonCard = ({ pokemon }) => {
+const PokemonCard = ({ pokemon, onClick }) => {
   return (
-    <div className="border rounded-lg p-4 flex flex-col items-center gap-2 cursor-pointer hover:shadow-lg transition">
-      {/* Imagen */}
+    <div
+      onClick={onClick}
+      className="border rounded-lg p-4 flex flex-col items-center gap-2 cursor-pointer hover:shadow-lg transition"
+    >
       <img
         src={pokemon.sprites.front_default}
         alt={pokemon.name}
         className="w-24 h-24"
       />
-      {/* Numero y nombre */}
       <p className="font-bold capitalize">
         #{pokemon.id} {pokemon.name}
       </p>
-      {/* Tipos */}
-      <div className="flex gap-1">
+      <div className="flex gap-1 flex-wrap justify-center">
         {pokemon.types.map((t) => (
           <span
             key={t.type.name}
@@ -23,8 +22,10 @@ const PokemonCard = ({ pokemon }) => {
           </span>
         ))}
       </div>
-      {/* Boton desbloquear */}
-      <button className="mt-2 bg-blue-500 text-white text-sm px-4 py-1 rounded hover:bg-blue-600">
+      <button
+        onClick={(e) => e.stopPropagation()}
+        className="mt-2 bg-blue-500 text-white text-sm px-4 py-1 rounded hover:bg-blue-600"
+      >
         Desbloquear
       </button>
     </div>

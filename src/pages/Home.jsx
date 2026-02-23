@@ -1,14 +1,18 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import usePokemon from '../hooks/usePokemon'
 import PokemonCard from '../components/PokemonCard'
 import SkeletonCard from '../components/SkeletonCard'
+import Pagination from '../components/Pagination'
 
 const Home = () => {
-  const { data: pokemons, isLoading, isError } = usePokemon()
   const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const { data, isLoading, isError } = usePokemon(page)
+  console.log('data:', data)
+  const navigate = useNavigate()
 
-  // Filtrar por nombre
-  const filtered = pokemons?.filter((p) =>
+  const filtered = data?.pokemons?.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase())
   )
 
@@ -30,12 +34,25 @@ const Home = () => {
       {/* Grid de tarjetas */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
         {isLoading
-          ? // Mostrar 12 skeletons mientras carga
-            Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)
-          : filtered.map((pokemon) => (
-              <PokemonCard key={pokemon.id} pokemon={pokemon} />
+          ? Array.from({ length: 20 }).map((_, i) => <SkeletonCard key={i} />)
+          : filtered?.filter(Boolean).map((pokemon) => (
+              <PokemonCard
+                key={pokemon.id}
+                pokemon={pokemon}
+                onClick={() => navigate(`/pokemon/${pokemon.id}`)}
+              />
             ))}
       </div>
+
+      {/* Paginacion */}
+      {!isLoading && !search && (
+        <Pagination
+          currentPage={page}
+          totalPages={data?.totalPages}
+          onNext={() => setPage((p) => p + 1)}
+          onPrev={() => setPage((p) => p - 1)}
+        />
+      )}
     </div>
   )
 }
