@@ -1,16 +1,38 @@
-# React + Vite
+# Pokémon App 🎮
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicación web construida con React que consume la PokeAPI y JSONPlaceholder.
 
-Currently, two official plugins are available:
+## Tecnologías
+- React + Vite
+- React Router DOM
+- React Query / TanStack Query
+- React Hook Form + Zod
+- Tailwind CSS v3
+- Axios
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Instalación
 
-## React Compiler
+git clone https://github.com/fernandorodrigoce-dotcom/pokemon-app.git
+cd pokemon-app
+npm install
+npm run dev
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Páginas
+- `/` → Pokédex con lista de pokémons, buscador y paginación
+- `/pokemon/:id` → Detalle del pokémon con stats, habilidades y formulario de reseña
+- `/posts` → CRUD completo de posts
+- `/battle` → Modo batalla (próximamente)
 
-## Expanding the ESLint configuration
+## Funcionalidades
+- Lista de pokémons con React Query y paginación
+- Skeletons de carga con delay de 2 segundos
+- Buscador en tiempo real
+- Vista de detalle por pokémon
+- Formulario validado con Zod y React Hook Form
+- CRUD completo con Axios y JSONPlaceholder
+- Notificaciones de éxito y error
+- Navbar de navegación
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## APIs
+- PokeAPI: https://pokeapi.co/api/v2/
+- JSONPlaceholder: https://jsonplaceholder.typicode.com/
