@@ -5,6 +5,7 @@ import PokemonDetail from './pages/PokemonDetail'
 import Posts from './pages/Posts'
 import PvP from './pages/PvP'
 import Admin from './pages/Admin'
+import Arcade from './pages/Arcade'
 import Navbar from './components/funcionespagina/Navbar'
 
 const App = () => {
@@ -18,6 +19,7 @@ const App = () => {
         <Route path="/posts" element={<Posts />} />
         <Route path="/pvp" element={<PvP />} />
         <Route path="/admin" element={<Admin />} />
+        <Route path="/arcade" element={<Arcade />} />
       </Routes>
     </>
   )

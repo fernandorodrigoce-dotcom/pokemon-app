@@ -19,14 +19,6 @@ const typeTranslations = {
   ghost: 'FANTASMA', steel: 'ACERO',
 }
 
-const speakPokemon = (name) => {
-  const utterance = new SpeechSynthesisUtterance(name)
-  utterance.rate = 0.7
-  utterance.pitch = 0.5
-  utterance.volume = 1
-  window.speechSynthesis.speak(utterance)
-}
-
 const PokemonCard = ({ pokemon, onClick }) => {
   const [showPuzzle, setShowPuzzle] = useState(false)
   const [toast, setToast] = useState(null)
@@ -51,15 +43,10 @@ const PokemonCard = ({ pokemon, onClick }) => {
     if (!isUnlocked) setShowPuzzle(true)
   }
 
-  const handleClick = () => {
-    if (isUnlocked) speakPokemon(pokemon.name)
-    onClick()
-  }
-
   return (
     <>
       <div
-        onClick={handleClick}
+        onClick={onClick}
         className="flex flex-col cursor-pointer hover:scale-105 transition-transform"
         style={{
           background: `linear-gradient(135deg, #cc0000 0%, #aa0000 40%, ${typeColor}33 100%)`,
@@ -147,7 +134,7 @@ const PokemonCard = ({ pokemon, onClick }) => {
               DESBLOQUEAR
             </button>
           ) : (
-            <span style={{ fontSize: '6px', color: '#4ade80' }}>★ CAPTURADO</span>
+            <span style={{ fontSize: '6px', color: '#4ade80' }}>CAPTURADO</span>
           )}
         </div>
       </div>

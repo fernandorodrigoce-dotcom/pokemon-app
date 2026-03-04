@@ -1,6 +1,4 @@
 import { useState, useEffect, useRef } from 'react'
-import { ref, update, onValue } from 'firebase/database'
-import { rtdb } from '../../firebase'
 
 const typeChart = {
   fire:{grass:2,water:0.5,fire:0.5,ice:2,bug:2,steel:2},
@@ -24,153 +22,136 @@ const typeChart = {
 }
 
 const getTypeMultiplier = (moveType, defenderTypes) => {
-  let multiplier = 1
-  defenderTypes.forEach((type) => {
-    const e = typeChart[moveType]?.[type]
-    if (e !== undefined) multiplier *= e
-  })
-  return multiplier
+  let m = 1
+  defenderTypes.forEach(t => { const e = typeChart[moveType]?.[t]; if (e !== undefined) m *= e })
+  return m
 }
 
 const calculateDamage = (attacker, move, defender) => {
-  if (!move.power) return { damage:0,missed:true,typeMultiplier:1 }
+  if (!move.power) return { damage: 0, missed: true, typeMultiplier: 1 }
   const level = 50
   const isSpecial = move.damage_class?.name === 'special'
-  const atk = isSpecial ? attacker.stats.find(s=>s.stat.name==='special-attack').base_stat : attacker.stats.find(s=>s.stat.name==='attack').base_stat
-  const def = isSpecial ? defender.stats.find(s=>s.stat.name==='special-defense').base_stat : defender.stats.find(s=>s.stat.name==='defense').base_stat
-  const defTypes = defender.types.map(t=>typeof t==='string'?t:t.type.name)
-  const atkTypes = attacker.types.map(t=>typeof t==='string'?t:t.type.name)
+  const atk = isSpecial
+    ? attacker.stats.find(s => s.stat.name === 'special-attack').base_stat
+    : attacker.stats.find(s => s.stat.name === 'attack').base_stat
+  const def = isSpecial
+    ? defender.stats.find(s => s.stat.name === 'special-defense').base_stat
+    : defender.stats.find(s => s.stat.name === 'defense').base_stat
+  const defTypes = defender.types.map(t => typeof t === 'string' ? t : t.type.name)
+  const atkTypes = attacker.types.map(t => typeof t === 'string' ? t : t.type.name)
   const typeMultiplier = getTypeMultiplier(move.type?.name, defTypes)
   const hit = Math.random() * 100 <= (move.accuracy || 100)
-  if (!hit) return { damage:0,missed:true,typeMultiplier }
+  if (!hit) return { damage: 0, missed: true, typeMultiplier }
   const stab = atkTypes.includes(move.type?.name) ? 1.5 : 1
   const critical = Math.random() < 0.06 ? 2 : 1
   const random = 0.85 + Math.random() * 0.15
-  const damage = Math.floor(((((2*level)/5+2)*move.power*(atk/def))/50+2)*stab*typeMultiplier*critical*random)
-  return { damage,missed:false,typeMultiplier,critical:critical===2,stab:stab===1.5 }
+  const damage = Math.floor(((((2 * level) / 5 + 2) * move.power * (atk / def)) / 50 + 2) * stab * typeMultiplier * critical * random)
+  return { damage, missed: false, typeMultiplier, critical: critical === 2, stab: stab === 1.5 }
 }
 
-const calcMaxHP = (baseHP) => Math.floor(((2*baseHP*50)/100)+50+10)
+const calcMaxHP = (baseHP) => Math.floor(((2 * baseHP * 50) / 100) + 50 + 10)
 
-const usePvPBattle = (roomId, myKey, rivalKey, roomData) => {
-  const battle = roomData?.battle
-  const myTeamData = roomData?.[myKey]?.pokemons || []
-  const rivalTeamData = roomData?.[rivalKey]?.pokemons || []
+const useBattle = (myPokemon, rivalPokemon, mySelectedMoves) => {
+  const myMaxHP = myPokemon ? calcMaxHP(myPokemon.stats.find(s => s.stat.name === 'hp').base_stat) : 0
+  const rivalMaxHP = rivalPokemon ? calcMaxHP(rivalPokemon.stats.find(s => s.stat.name === 'hp').base_stat) : 0
 
-  const [myHPs, setMyHPs] = useState([])
-  const [rivalHPs, setRivalHPs] = useState([])
-  const [initializedFor, setInitializedFor] = useState(null)
+  const [myHP, setMyHP] = useState(myMaxHP)
+  const [rivalHP, setRivalHP] = useState(rivalMaxHP)
+  const [isMyTurn, setIsMyTurn] = useState(true)
+  const [battleOver, setBattleOver] = useState(false)
+  const [winner, setWinner] = useState(null)
+  const [log, setLog] = useState([])
+  const [loading, setLoading] = useState(false)
 
-  const myHPsRef = useRef([])
-  const rivalHPsRef = useRef([])
+  const myHPRef = useRef(myMaxHP)
+  const rivalHPRef = useRef(rivalMaxHP)
+  const battleOverRef = useRef(false)
 
-  const battlePhase = battle?.phase
-  const battleSession = battle?.session || 0
-
-  useEffect(() => {
-    if (!myTeamData.length || !rivalTeamData.length) return
-    if (battlePhase !== 'choosingFirst') return
-    if (initializedFor === battleSession) return
-
-    const mHPs = myTeamData.map(p => calcMaxHP(p.stats.find(s=>s.stat.name==='hp').base_stat))
-    const rHPs = rivalTeamData.map(p => calcMaxHP(p.stats.find(s=>s.stat.name==='hp').base_stat))
-    setMyHPs(mHPs)
-    setRivalHPs(rHPs)
-    myHPsRef.current = mHPs
-    rivalHPsRef.current = rHPs
-    update(ref(rtdb,'rooms/'+roomId+'/battle/hps/'+myKey), { 0:mHPs[0],1:mHPs[1],2:mHPs[2] })
-    setInitializedFor(battleSession)
-  }, [myTeamData.length, rivalTeamData.length, battlePhase, battleSession])
+  // Movimientos del rival — los 4 primeros moves con power del rival
+  const [rivalMoves, setRivalMoves] = useState([])
 
   useEffect(() => {
-    if (!roomId) return
-    const hpsRef = ref(rtdb,'rooms/'+roomId+'/battle/hps')
-    const unsub = onValue(hpsRef, (snap) => {
-      const data = snap.val()
-      if (!data) return
-      if (data[myKey]) {
-        const hps = [data[myKey][0]??myHPsRef.current[0], data[myKey][1]??myHPsRef.current[1], data[myKey][2]??myHPsRef.current[2]]
-        myHPsRef.current = hps
-        setMyHPs(hps)
-      }
-      if (data[rivalKey]) {
-        const hps = [data[rivalKey][0]??rivalHPsRef.current[0], data[rivalKey][1]??rivalHPsRef.current[1], data[rivalKey][2]??rivalHPsRef.current[2]]
-        rivalHPsRef.current = hps
-        setRivalHPs(hps)
-      }
-    })
-    return () => unsub()
-  }, [roomId])
+    if (!rivalPokemon) return
+    const loadRivalMoves = async () => {
+      setLoading(true)
+      const movesWithUrl = rivalPokemon.moves.slice(0, 40).map(m => m.move.url)
+      const details = await Promise.all(movesWithUrl.map(url => fetch(url).then(r => r.json())))
+      const withPower = details.filter(m => m.power).slice(0, 4)
+      setRivalMoves(withPower)
+      setLoading(false)
+    }
+    loadRivalMoves()
+  }, [rivalPokemon])
 
-  const myActivePokemonIndex = battle?.players?.[myKey]?.activePokemon ?? 0
-  const rivalActivePokemonIndex = battle?.players?.[rivalKey]?.activePokemon ?? 0
-  const isMyTurn = battle?.turn === myKey
-  const winner = battle?.winner
-  const log = battle?.log || []
+  const addLog = (msg) => setLog(prev => [msg, ...prev].slice(0, 20))
 
-  const myActivePokemon = myTeamData[myActivePokemonIndex]
-  const rivalActivePokemon = rivalTeamData[rivalActivePokemonIndex]
+  const rivalAttack = () => {
+    if (battleOverRef.current || rivalMoves.length === 0) return
+    const move = rivalMoves[Math.floor(Math.random() * rivalMoves.length)]
+    const { damage, missed, typeMultiplier, critical } = calculateDamage(rivalPokemon, move, myPokemon)
+    const newHP = Math.max(0, myHPRef.current - damage)
+    myHPRef.current = newHP
+    setMyHP(newHP)
 
-  const chooseFirstPokemon = async (index) => {
-    await update(ref(rtdb,'rooms/'+roomId+'/battle/players/'+myKey), { activePokemon:index,firstChosen:true })
-    const { get } = await import('firebase/database')
-    const snap = await get(ref(rtdb,'rooms/'+roomId+'/battle/players'))
-    const players = snap.val()
-    const rivalChosen = players?.[rivalKey]?.firstChosen
-    if (rivalChosen) {
-      const mySpeed = myTeamData[index].stats.find(s=>s.stat.name==='speed').base_stat
-      const rivalSpeed = rivalTeamData[players[rivalKey].activePokemon].stats.find(s=>s.stat.name==='speed').base_stat
-      const firstTurn = mySpeed > rivalSpeed ? myKey : rivalSpeed > mySpeed ? rivalKey : (Math.random()<0.5?myKey:rivalKey)
-      await update(ref(rtdb,'rooms/'+roomId+'/battle'), { phase:'fighting',turn:firstTurn })
+    let logMsg = missed
+      ? `${rivalPokemon.name} fallo ${move.name}!`
+      : `${rivalPokemon.name} uso ${move.name} -> ${damage} daño`
+    if (!missed && typeMultiplier > 1) logMsg += ' ¡Es muy eficaz!'
+    if (!missed && typeMultiplier < 1 && typeMultiplier > 0) logMsg += ' No es muy eficaz...'
+    if (!missed && typeMultiplier === 0) logMsg += ' No afecta...'
+    if (!missed && critical) logMsg += ' ¡Golpe critico!'
+    addLog(logMsg)
+
+    if (newHP <= 0) {
+      battleOverRef.current = true
+      setBattleOver(true)
+      setWinner('rival')
+    } else {
+      setIsMyTurn(true)
     }
   }
 
-  const attack = async (move) => {
-    if (!isMyTurn || battlePhase !== 'fighting') return
-    const myPokemon = myActivePokemon
-    const rivalPokemon = rivalActivePokemon
-    const rivalIdx = rivalActivePokemonIndex
-    const { damage,missed,typeMultiplier,critical,stab } = calculateDamage(myPokemon,move,rivalPokemon)
-    const newRivalHP = Math.max(0, rivalHPsRef.current[rivalIdx]-damage)
-    const newRivalHPs = [...rivalHPsRef.current]
-    newRivalHPs[rivalIdx] = newRivalHP
-    rivalHPsRef.current = newRivalHPs
-    setRivalHPs([...newRivalHPs])
-    let logMsg = missed ? myPokemon.name+' fallo '+move.name+'!' : myPokemon.name+' uso '+move.name+' -> '+damage+' daño'
-    if (!missed && typeMultiplier>1) logMsg += ' ¡Es muy eficaz!'
-    if (!missed && typeMultiplier<1 && typeMultiplier>0) logMsg += ' No es muy eficaz...'
-    if (!missed && typeMultiplier===0) logMsg += ' No afecta...'
+  const attack = (move) => {
+    if (!isMyTurn || battleOver) return
+    const { damage, missed, typeMultiplier, critical, stab } = calculateDamage(myPokemon, move, rivalPokemon)
+    const newHP = Math.max(0, rivalHPRef.current - damage)
+    rivalHPRef.current = newHP
+    setRivalHP(newHP)
+
+    let logMsg = missed
+      ? `${myPokemon.name} fallo ${move.name}!`
+      : `${myPokemon.name} uso ${move.name} -> ${damage} daño`
+    if (!missed && typeMultiplier > 1) logMsg += ' ¡Es muy eficaz!'
+    if (!missed && typeMultiplier < 1 && typeMultiplier > 0) logMsg += ' No es muy eficaz...'
+    if (!missed && typeMultiplier === 0) logMsg += ' No afecta...'
     if (!missed && critical) logMsg += ' ¡Golpe critico!'
     if (!missed && stab) logMsg += ' (STAB)'
-    const newLog = [logMsg,...log].slice(0,20)
-    const rivalFainted = newRivalHP <= 0
-    const rivalRemaining = newRivalHPs.filter(hp=>hp>0).length
-    if (rivalFainted && rivalRemaining===0) {
-      await update(ref(rtdb,'rooms/'+roomId+'/battle/hps/'+rivalKey), { [rivalIdx]:0 })
-      await update(ref(rtdb,'rooms/'+roomId+'/battle'), { log:newLog,phase:'finished',winner:myKey,turn:null })
-    } else if (rivalFainted) {
-      const faintedLog = [rivalPokemon.name+' se debilito!',...newLog].slice(0,20)
-      await update(ref(rtdb,'rooms/'+roomId+'/battle/hps/'+rivalKey), { [rivalIdx]:0 })
-      await update(ref(rtdb,'rooms/'+roomId+'/battle'), { log:faintedLog,phase:'switchPokemon',switchingPlayer:rivalKey,turn:null })
-    } else {
-      await update(ref(rtdb,'rooms/'+roomId+'/battle/hps/'+rivalKey), { [rivalIdx]:newRivalHP })
-      await update(ref(rtdb,'rooms/'+roomId+'/battle'), { log:newLog,turn:rivalKey })
+    addLog(logMsg)
+
+    if (newHP <= 0) {
+      battleOverRef.current = true
+      setBattleOver(true)
+      setWinner('me')
+      return
     }
+
+    setIsMyTurn(false)
+    setTimeout(() => rivalAttack(), 1200)
   }
 
-  const switchPokemon = async (index) => {
-    if (battlePhase !== 'switchPokemon') return
-    if (roomData?.battle?.switchingPlayer !== myKey) return
-    const nextTurn = myKey==='player1' ? 'player2' : 'player1'
-    const switchLog = [myTeamData[index].name+' salio a batalla!',...log].slice(0,20)
-    await update(ref(rtdb,'rooms/'+roomId+'/battle/players/'+myKey), { activePokemon:index })
-    await update(ref(rtdb,'rooms/'+roomId+'/battle'), { phase:'fighting',turn:nextTurn,log:switchLog,switchingPlayer:null })
+  return {
+    myHP,
+    rivalHP,
+    myMaxHP,
+    rivalMaxHP,
+    myMoves: mySelectedMoves || [],
+    log,
+    isMyTurn,
+    battleOver,
+    winner,
+    loading,
+    attack,
   }
-
-  const myMaxHPs = myTeamData.map(p=>calcMaxHP(p.stats.find(s=>s.stat.name==='hp').base_stat))
-  const rivalMaxHPs = rivalTeamData.map(p=>calcMaxHP(p.stats.find(s=>s.stat.name==='hp').base_stat))
-
-  return { myTeam:myTeamData,rivalTeam:rivalTeamData,myActivePokemon,rivalActivePokemon,myActivePokemonIndex,rivalActivePokemonIndex,myHPs,rivalHPs,myMaxHPs,rivalMaxHPs,isMyTurn,battlePhase,winner,log,chooseFirstPokemon,attack,switchPokemon }
 }
 
-export default usePvPBattle
+export default useBattle

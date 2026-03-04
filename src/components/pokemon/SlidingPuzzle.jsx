@@ -31,7 +31,6 @@ const SlidingPuzzle = ({ imageUrl, onSolved }) => {
     const emptyRow = Math.floor(emptyIdx / SIZE)
     const emptyCol = emptyIdx % SIZE
 
-    // Misma fila o columna que el espacio vacío
     const sameRow = row === emptyRow
     const sameCol = col === emptyCol
 
@@ -40,7 +39,6 @@ const SlidingPuzzle = ({ imageUrl, onSolved }) => {
     const newBoard = [...board]
 
     if (sameRow) {
-      // Mover todas las piezas entre idx y emptyIdx en la misma fila
       const step = col < emptyCol ? 1 : -1
       for (let c = emptyCol; c !== col; c -= step) {
         const from = row * SIZE + (c - step)
@@ -49,7 +47,6 @@ const SlidingPuzzle = ({ imageUrl, onSolved }) => {
       }
       newBoard[idx] = 0
     } else {
-      // Mover todas las piezas entre idx y emptyIdx en la misma columna
       const step = row < emptyRow ? 1 : -1
       for (let r = emptyRow; r !== row; r -= step) {
         const from = (r - step) * SIZE + col
@@ -94,10 +91,10 @@ const SlidingPuzzle = ({ imageUrl, onSolved }) => {
                 backgroundImage: isBlank ? 'none' : `url(${imageUrl})`,
                 backgroundSize: `${SIZE * pieceSize}px ${SIZE * pieceSize}px`,
                 backgroundPosition: `-${srcCol * pieceSize}px -${srcRow * pieceSize}px`,
-                backgroundColor: isBlank ? '#1a1a2e' : 'transparent',
+                backgroundColor: isBlank ? '#1a1a2e' : '#fff',
                 cursor: isBlank ? 'default' : 'pointer',
                 imageRendering: 'pixelated',
-                border: isBlank ? '2px dashed #333' : '2px solid #ffdd00',
+                border: isBlank ? '2px dashed #333' : 'none',
                 transition: 'all 0.1s',
               }}
             />
@@ -107,7 +104,7 @@ const SlidingPuzzle = ({ imageUrl, onSolved }) => {
 
       {solved && (
         <p style={{ fontFamily: "'Press Start 2P', cursive", fontSize: '8px', color: '#4ade80' }}>
-          PUZZLE RESUELTO ★
+          PUZZLE RESUELTO
         </p>
       )}
 

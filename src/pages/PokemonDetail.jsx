@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import PokemonForm from '../components/pokemon/PokemonForm'
+import Toast from '../components/funcionespagina/Toast'
 
 const typeColors = {
   fire: '#F08030', water: '#6890F0', grass: '#78C850', electric: '#F8D030',
@@ -44,6 +46,7 @@ const StatBar = ({ name, value }) => {
 const PokemonDetail = () => {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [toast, setToast] = useState(null)
 
   const { data: pokemon, isLoading, isError } = useQuery({
     queryKey: ['pokemon', id],
@@ -61,8 +64,6 @@ const PokemonDetail = () => {
       const species = await speciesRes.json()
       const evoRes = await fetch(species.evolution_chain.url)
       const evoData = await evoRes.json()
-
-      // Extraer cadena de evoluciones
       const chain = []
       let current = evoData.chain
       while (current) {
@@ -99,6 +100,9 @@ const PokemonDetail = () => {
 
   return (
     <div className="min-h-screen bg-gray-900 p-4">
+
+      {/* Toast fuera de la carta */}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
 
       {/* Boton volver */}
       <button
@@ -250,7 +254,10 @@ const PokemonDetail = () => {
           <p style={{ fontSize: '7px', color: '#333', marginBottom: '8px', fontFamily: "'Press Start 2P', cursive" }}>
             RESENA
           </p>
-          <PokemonForm pokemonName={pokemon.name} />
+          <PokemonForm
+            pokemonName={pokemon.name}
+            onSuccess={(msg) => setToast({ message: msg, type: 'success' })}
+          />
         </div>
 
       </div>

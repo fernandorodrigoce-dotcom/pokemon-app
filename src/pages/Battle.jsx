@@ -5,18 +5,12 @@ import { db } from '../firebase'
 import useAuth from '../hooks/autenticaciongoo/useAuth'
 import useUnlocked from '../hooks/pokemon/useUnlocked'
 import StarterSelection from "../components/battle/pokemonesdeinicio/StarterSelection"
-import BattleRoom from '../components/battle/reutilizablepvp/BattleRoom'
-import MoveSelector from '../components/battle/reutilizablepvp/MoveSelector'
 
 const Battle = () => {
   const { user, loading, loginWithGoogle, logout } = useAuth()
   const { unlocked } = useUnlocked()
   const [starter, setStarter] = useState(null)
   const [loadingStarter, setLoadingStarter] = useState(false)
-  const [myPokemon, setMyPokemon] = useState(null)
-  const [rivalPokemon, setRivalPokemon] = useState(null)
-  const [mySelectedMoves, setMySelectedMoves] = useState([])
-  const [stage, setStage] = useState('menu')
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -42,25 +36,6 @@ const Battle = () => {
     setStarter({ id: pokemon.id, name: pokemon.name, sprite: pokemon.sprites.front_default })
   }
 
-  const loadFullPokemon = async (id) => {
-    const res = await fetch(`https://pokeapi.co/api/v2/pokemon/${id}`)
-    return res.json()
-  }
-
-  const startArcade = async () => {
-    const my = await loadFullPokemon(starter.id)
-    const rivalId = Math.floor(Math.random() * 151) + 1
-    const rival = await loadFullPokemon(rivalId)
-    setMyPokemon(my)
-    setRivalPokemon(rival)
-    setStage('selectMoves')
-  }
-
-  const handleMovesConfirmed = (moves) => {
-    setMySelectedMoves(moves)
-    setStage('battle')
-  }
-
   const PixelBtn = ({ onClick, children, color = '#cc0000' }) => (
     <button
       onClick={onClick}
@@ -83,9 +58,7 @@ const Battle = () => {
 
   if (loading || loadingStarter) return (
     <div style={{ minHeight: '100vh', width: '100%', background: '#cc0000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <p style={{ fontFamily: "'Press Start 2P', cursive", color: '#ffdd00', fontSize: '18px' }}>
-        CARGANDO...
-      </p>
+      <p style={{ fontFamily: "'Press Start 2P', cursive", color: '#ffdd00', fontSize: '18px' }}>CARGANDO...</p>
     </div>
   )
 
@@ -107,7 +80,7 @@ const Battle = () => {
           <PixelBtn onClick={loginWithGoogle} color='#ffdd00'>INICIAR CON GOOGLE</PixelBtn>
         </div>
         <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', padding: '16px', borderTop: '4px solid #000' }}>
-          {[1,2,3,4].map((i) => (
+          {[1, 2, 3, 4].map((i) => (
             <div key={i} style={{ width: '28px', height: '10px', background: '#aa0000', border: '2px solid #000' }} />
           ))}
         </div>
@@ -116,14 +89,6 @@ const Battle = () => {
   )
 
   if (!starter && !loadingStarter && user) return <StarterSelection onSelect={handleSelectStarter} />
-
-  if (stage === 'selectMoves' && myPokemon) return (
-    <MoveSelector pokemon={myPokemon} onConfirm={handleMovesConfirmed} onCancel={() => setStage('menu')} />
-  )
-
-  if (stage === 'battle' && myPokemon && rivalPokemon) return (
-    <BattleRoom myPokemon={myPokemon} rivalPokemon={rivalPokemon} mySelectedMoves={mySelectedMoves} onFinish={() => setStage('menu')} />
-  )
 
   return (
     <div style={{ minHeight: '100vh', width: '100%', background: '#cc0000', display: 'flex', flexDirection: 'column' }}>
@@ -192,12 +157,12 @@ const Battle = () => {
       {/* Botones modos */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: '24px', padding: '20px', borderTop: '4px solid #000', background: '#aa0000' }}>
         <PixelBtn onClick={() => navigate('/pvp')} color='#cc0000'>PVP ONLINE</PixelBtn>
-        <PixelBtn onClick={startArcade} color='#ffdd00'>ARCADE</PixelBtn>
+        <PixelBtn onClick={() => navigate('/arcade')} color='#ffdd00'>ARCADE</PixelBtn>
       </div>
 
       {/* Decorativos */}
       <div style={{ display: 'flex', justifyContent: 'center', gap: '10px', paddingBottom: '20px', background: '#aa0000' }}>
-        {[1,2,3,4].map((i) => (
+        {[1, 2, 3, 4].map((i) => (
           <div key={i} style={{ width: '28px', height: '10px', background: '#880000', border: '2px solid #000' }} />
         ))}
       </div>

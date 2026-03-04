@@ -2,77 +2,92 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 
-// Esquema de validacion con Zod
 const schema = z.object({
-  name: z.string().min(3, 'El nombre debe tener al menos 3 caracteres'),
-  comment: z.string().min(10, 'El comentario debe tener al menos 10 caracteres'),
-  rating: z.coerce.number().min(1, 'Mínimo 1').max(5, 'Máximo 5'),
+  name: z.string().min(3, 'Minimo 3 caracteres'),
+  comment: z.string().min(10, 'Minimo 10 caracteres'),
+  rating: z.coerce.number().min(1, 'Minimo 1').max(5, 'Maximo 5'),
 })
 
-const PokemonForm = ({ pokemonName }) => {
+const inputStyle = {
+  background: '#1a1a2e',
+  color: '#fff',
+  border: '3px solid #444',
+  padding: '8px 10px',
+  width: '100%',
+  fontFamily: "'Press Start 2P', cursive",
+  fontSize: '7px',
+  outline: 'none',
+}
+
+const labelStyle = {
+  fontFamily: "'Press Start 2P', cursive",
+  fontSize: '7px',
+  color: '#ffdd00',
+  display: 'block',
+  marginBottom: '6px',
+}
+
+const errorStyle = {
+  fontFamily: "'Press Start 2P', cursive",
+  fontSize: '6px',
+  color: '#ff6666',
+  marginTop: '4px',
+}
+
+const PokemonForm = ({ pokemonName, onSuccess }) => {
   const {
     register,
     handleSubmit,
     reset,
     formState: { errors },
-  } = useForm({
-    resolver: zodResolver(schema),
-  })
+  } = useForm({ resolver: zodResolver(schema) })
 
   const onSubmit = (data) => {
-    console.log('Reseña enviada:', data)
-    alert(`Reseña de ${pokemonName} enviada correctamente ✅`)
+    console.log('Resena enviada:', data)
     reset()
+    onSuccess(`Resena de ${pokemonName.toUpperCase()} enviada`)
   }
 
   return (
-    <div className="mt-6 border rounded-lg p-4 w-full">
-      <h2 className="text-xl font-bold mb-4">Dejar una reseña</h2>
+    <form onSubmit={handleSubmit(onSubmit)} style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
-        {/* Nombre */}
-        <div>
-          <label className="block mb-1 font-medium">Tu nombre</label>
-          <input
-            {...register('name')}
-            className="border px-3 py-2 rounded w-full"
-            placeholder="Ej: Ash Ketchum"
-          />
-          {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>}
-        </div>
+      <div>
+        <label style={labelStyle}>TU NOMBRE</label>
+        <input {...register('name')} style={inputStyle} placeholder="Ej: Ash Ketchum" />
+        {errors.name && <p style={errorStyle}>{errors.name.message}</p>}
+      </div>
 
-        {/* Comentario */}
-        <div>
-          <label className="block mb-1 font-medium">Comentario</label>
-          <textarea
-            {...register('comment')}
-            className="border px-3 py-2 rounded w-full"
-            placeholder="¿Qué opinas de este pokémon?"
-            rows={3}
-          />
-          {errors.comment && <p className="text-red-500 text-sm mt-1">{errors.comment.message}</p>}
-        </div>
+      <div>
+        <label style={labelStyle}>COMENTARIO</label>
+        <textarea {...register('comment')} style={{ ...inputStyle, resize: 'none' }} placeholder="Que opinas de este pokemon?" rows={3} />
+        {errors.comment && <p style={errorStyle}>{errors.comment.message}</p>}
+      </div>
 
-        {/* Rating */}
-        <div>
-          <label className="block mb-1 font-medium">Puntuación (1-5)</label>
-          <input
-            {...register('rating')}
-            type="number"
-            className="border px-3 py-2 rounded w-full"
-            placeholder="1 al 5"
-          />
-          {errors.rating && <p className="text-red-500 text-sm mt-1">{errors.rating.message}</p>}
-        </div>
+      <div>
+        <label style={labelStyle}>PUNTUACION (1-5)</label>
+        <input {...register('rating')} type="number" style={inputStyle} placeholder="1 al 5" />
+        {errors.rating && <p style={errorStyle}>{errors.rating.message}</p>}
+      </div>
 
-        <button
-          type="submit"
-          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-        >
-          Enviar reseña
-        </button>
-      </form>
-    </div>
+      <button
+        type="submit"
+        style={{
+          fontFamily: "'Press Start 2P', cursive",
+          fontSize: '8px',
+          color: '#000',
+          background: '#ffdd00',
+          border: '4px solid #000',
+          boxShadow: '4px 4px 0 #000',
+          padding: '10px',
+          cursor: 'pointer',
+          width: '100%',
+        }}
+        onMouseDown={e => e.currentTarget.style.boxShadow = '1px 1px 0 #000'}
+        onMouseUp={e => e.currentTarget.style.boxShadow = '4px 4px 0 #000'}
+      >
+        ENVIAR RESENA
+      </button>
+    </form>
   )
 }
 
